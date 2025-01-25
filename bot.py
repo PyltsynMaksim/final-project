@@ -6,7 +6,7 @@ import logging
 # Set up logging for better error handling
 logging.basicConfig(level=logging.INFO)
 
-TELEGRAM_TOKEN = '8191675436:AAErE5Rq6IeUPbcF90BrVJ87CEbXH2TmKQU'
+TELEGRAM_TOKEN = ''
 bot = telebot.TeleBot(TELEGRAM_TOKEN)
 
 # Store product list and user data to handle "Next" button
