@@ -6,7 +6,7 @@ import logging
 # Set up logging for better error handling
 logging.basicConfig(level=logging.INFO)
 
-TELEGRAM_TOKEN = ''
+TELEGRAM_TOKEN = '8191675436:AAErE5Rq6IeUPbcF90BrVJ87CEbXH2TmKQU'
 bot = telebot.TeleBot(TELEGRAM_TOKEN)
 
 # Store product list and user data to handle "Next" button
@@ -41,12 +41,13 @@ def send_welcome(message):
 def handle_callback(call):
     user_id = call.from_user.id
 
-    if call.data == "big_button":
-        if call.message.text:
-            # If the message has text, edit it
-            bot.edit_message_text("Выберите категорию:", chat_id=call.message.chat.id, message_id=call.message.message_id, reply_markup=second_buttons())
-        else:
-            # If the message has no text (like a photo), use edit_message_caption instead
+    if call.data == "big_button" or call.data == "back":
+        if call.data == "back":
+            photo_url = 'https://img1.wsimg.com/isteam/ip/6e5d5951-63a5-43bd-889a-8ab684a4f9e1/blob-0003.png/:/cr=t:0%25,l:0%25,w:100%25,h:100%25/rs=w:792,h:500,cg:true'
+            bot.edit_message_media(chat_id=call.message.chat.id, message_id=call.message.message_id,
+                                   media=types.InputMediaPhoto(photo_url, caption="Добро пожаловать"),
+                                   reply_markup=first_buttons())
+        elif call.data == "big_button":
             bot.edit_message_caption(caption="Выберите категорию:", chat_id=call.message.chat.id, message_id=call.message.message_id, reply_markup=second_buttons())
 
     elif call.data.startswith("category_"):
@@ -59,22 +60,17 @@ def handle_callback(call):
 
     elif call.data == "view_cart":
         favourites = get_user_data(user_id)
+        cart_message = "Ваша корзина:\n\n"
         if favourites:
             for fav in favourites:
                 product = get_product(fav['product_id'])
                 if product:
-                    show_product_details(call.message, product)
+                    cart_message += f"{product['name']} - {product['price']}\n"
                 else:
-                    bot.edit_message_text("Несколько товаров из вашей корзины недоступны", chat_id=call.message.chat.id, message_id=call.message.message_id)
+                    cart_message += "Товар недоступен\n"
+            bot.edit_message_text(cart_message, chat_id=call.message.chat.id, message_id=call.message.message_id, reply_markup=first_buttons())
         else:
             bot.edit_message_text("Ваша корзина пуста", chat_id=call.message.chat.id, message_id=call.message.message_id)
-
-    elif call.data == "back":
-        if 'photo' in call.message.json:
-            media = types.InputMediaPhoto(call.message.photo[-1].file_id, caption="Welcome")
-            bot.edit_message_media(media=media, chat_id=call.message.chat.id, message_id=call.message.message_id, reply_markup=first_buttons())
-        else:
-            bot.edit_message_text("Добро пожаловать", chat_id=call.message.chat.id, message_id=call.message.message_id, reply_markup=first_buttons())
 
     elif call.data.startswith("product_"):
         product_id = int(call.data.split('_')[1])
@@ -98,8 +94,6 @@ def handle_callback(call):
         next_product = products[next_index]
         show_product_details(call.message, next_product)
 
-
-
 def show_product_details(message, product):
     if not product:
         bot.edit_message_text("Product not found", chat_id=message.chat.id, message_id=message.message_id)
@@ -113,25 +107,14 @@ def show_product_details(message, product):
     markup.add(back_btn, fav_btn, forward_btn)
 
     image_path = product['image']
-    caption = f"""
-    Название: {product['name']}
-    Размеры: {product['dimensions']}
-    Цена: {product['price']}
-    Сылка: {product['link']}
-    """
+    caption = f"Название: {product['name']}\nРазмеры: {product['dimensions']}\nЦена: {product['price']}\nСсылка: {product['link']}"
 
-    try:
-        if image_path.lower().startswith(('http://', 'https://')):
-            bot.send_photo(message.chat.id, image_path, caption=caption, reply_markup=markup)
-        else:
-            with open(image_path, 'rb') as photo:
-                bot.send_photo(message.chat.id, photo, caption=caption, reply_markup=markup)
-    except FileNotFoundError:
-        bot.edit_message_text(f"Image file not found: {image_path}\n\n{caption}", chat_id=message.chat.id, message_id=message.message_id, reply_markup=markup)
-        logging.error(f"Image file not found: {image_path}")
-    except Exception as e:
-        bot.edit_message_text(f"Error with image: {e}\n\n{caption}", chat_id=message.chat.id, message_id=message.message_id, reply_markup=markup)
-        logging.error(f"Error with image for product {product['id']}: {e}")
+    if image_path.lower().startswith(('http://', 'https://')):
+        bot.send_photo(message.chat.id, image_path, caption=caption, reply_markup=markup)
+    else:
+        with open(image_path, 'rb') as photo:
+            bot.send_photo(message.chat.id, photo, caption=caption, reply_markup=markup)
+
 
 if __name__ == '__main__':
     bot.polling()
