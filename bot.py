@@ -8,7 +8,6 @@ logging.basicConfig(level=logging.INFO)
 TELEGRAM_TOKEN = '8191675436:AAErE5Rq6IeUPbcF90BrVJ87CEbXH2TmKQU'
 bot = telebot.TeleBot(TELEGRAM_TOKEN)
 
-# Store product list and user data to handle "Next" button
 user_product_data = {}
 
 def first_buttons():
@@ -33,8 +32,9 @@ def second_buttons():
 
 @bot.message_handler(commands=['start'])
 def send_welcome(message):
+    text = "Добро пожаловать"
     photo_url = 'https://img1.wsimg.com/isteam/ip/6e5d5951-63a5-43bd-889a-8ab684a4f9e1/blob-0003.png/:/cr=t:0%25,l:0%25,w:100%25,h:100%25/rs=w:792,h:500,cg:true'
-    bot.send_photo(message.chat.id, photo_url, "Добро пожаловать", reply_markup=first_buttons())
+    bot.send_photo(message.chat.id, photo_url, text, reply_markup=first_buttons())
 
 @bot.callback_query_handler(func=lambda call: True)
 def handle_callback(call):
@@ -67,7 +67,7 @@ def handle_callback(call):
                     cart_message += f"{product['name']} - {product['price']}\n"
                 else:
                     cart_message += "Товар недоступен\n"
-            bot.edit_message_text(cart_message, chat_id=call.message.chat.id, message_id=call.message.message_id, reply_markup=first_buttons())
+            bot.edit_message_media(cart_message, chat_id=call.message.chat.id, message_id=call.message.message_id, reply_markup=first_buttons())
         else:
             bot.edit_message_text("Ваша корзина пуста", chat_id=call.message.chat.id, message_id=call.message.message_id)
 
@@ -86,8 +86,8 @@ def handle_callback(call):
         category = user_product_data[user_id]['category']
         products = user_product_data[user_id]['products']
         index = user_product_data[user_id]['index']
+        total_products = len(products)
 
-        # Find next product in the list
         next_index = (index + 1) % len(products)
         user_product_data[user_id]['index'] = next_index
         next_product = products[next_index]
@@ -103,7 +103,13 @@ def show_product_details(message, product):
     back_btn = types.InlineKeyboardButton("Назад", callback_data="back")
     fav_btn = types.InlineKeyboardButton("Добавить в корзину", callback_data=f"add_favourite_{product['id']}")
     forward_btn = types.InlineKeyboardButton("Следующее", callback_data=f"next_{product['id']}")
-    markup.add(back_btn, fav_btn, forward_btn)
+    markup.add(back_btn, fav_btn)
+
+    if user_product_data[message.chat.id]['index'] == len(user_product_data[message.chat.id]['products']) - 1:
+        forward_btn = None
+
+    if forward_btn:
+        markup.add(forward_btn)
 
     image_path = product['image']
     caption = f"Название: {product['name']}\nРазмеры: {product['dimensions']}\nЦена: {product['price']}\nСсылка: {product['link']}"
