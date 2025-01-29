@@ -3,10 +3,9 @@ from telebot import types
 from db import get_product, get_products_by_category, add_to_favourite, get_user_data
 import logging
 
-# Set up logging for better error handling
 logging.basicConfig(level=logging.INFO)
 
-TELEGRAM_TOKEN = ''
+TELEGRAM_TOKEN = '8191675436:AAErE5Rq6IeUPbcF90BrVJ87CEbXH2TmKQU'
 bot = telebot.TeleBot(TELEGRAM_TOKEN)
 
 # Store product list and user data to handle "Next" button
@@ -109,12 +108,24 @@ def show_product_details(message, product):
     image_path = product['image']
     caption = f"Название: {product['name']}\nРазмеры: {product['dimensions']}\nЦена: {product['price']}\nСсылка: {product['link']}"
 
-    if image_path.lower().startswith(('http://', 'https://')):
-        bot.send_photo(message.chat.id, image_path, caption=caption, reply_markup=markup)
-    else:
-        with open(image_path, 'rb') as photo:
-            bot.send_photo(message.chat.id, photo, caption=caption, reply_markup=markup)
-
+    try:
+        if image_path and image_path.lower().startswith(('http://', 'https://')):
+            bot.edit_message_media(
+                chat_id=message.chat.id,
+                message_id=message.message_id,
+                media=types.InputMediaPhoto(image_path, caption=caption),
+                reply_markup=markup)
+        else:
+            with open(image_path, 'rb') as photo:
+                bot.edit_message_media(
+                    chat_id=message.chat.id,
+                    message_id=message.message_id,
+                    media=types.InputMediaPhoto(photo.read(), caption=caption),
+                    reply_markup=markup)
+    except Exception as e:
+        logging.error(f"Error showing product details: {e}")
+        bot.edit_message_text("Error loading product image", chat_id=message.chat.id, message_id=message.message_id)
 
 if __name__ == '__main__':
     bot.polling()
+
