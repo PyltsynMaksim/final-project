@@ -1,5 +1,5 @@
 import telebot 
-from telebot import types
+from telebot import *
 from db import get_product, get_products_by_category, add_to_favourite, get_user_data
 import logging
 
@@ -60,16 +60,18 @@ def handle_callback(call):
     elif call.data == "view_cart":
         favourites = get_user_data(user_id)
         cart_message = "Ваша корзина:\n\n"
+        total_price = 0
         if favourites:
             for fav in favourites:
                 product = get_product(fav['product_id'])
                 if product:
+                    price = float(product['price'].replace('₽', '').replace(' ', ''))
                     cart_message += f"{product['name']} - {product['price']}\n"
-                else:
-                    cart_message += "Товар недоступен\n"
-            bot.edit_message_media(cart_message, chat_id=call.message.chat.id, message_id=call.message.message_id, reply_markup=first_buttons())
+                    total_price += price
+            cart_message += f"\nОбщая стоимость: {total_price:.2f}₽"
+            bot.edit_message_caption(caption=cart_message, chat_id=call.message.chat.id, message_id=call.message.message_id, reply_markup=first_buttons())
         else:
-            bot.edit_message_text("Ваша корзина пуста", chat_id=call.message.chat.id, message_id=call.message.message_id)
+            bot.edit_message_caption(caption="Ваша корзина пуста", chat_id=call.message.chat.id, message_id=call.message.message_id, reply_markup=first_buttons())
 
     elif call.data.startswith("product_"):
         product_id = int(call.data.split('_')[1])
@@ -106,7 +108,7 @@ def show_product_details(message, product):
     markup.add(back_btn, fav_btn)
 
     if user_product_data[message.chat.id]['index'] == len(user_product_data[message.chat.id]['products']) - 1:
-        forward_btn = None
+        forward_btn = types.InlineKeyboardButton("В начало", callback_data=f"next_{product['id']}")
 
     if forward_btn:
         markup.add(forward_btn)
@@ -134,4 +136,3 @@ def show_product_details(message, product):
 
 if __name__ == '__main__':
     bot.polling()
-
